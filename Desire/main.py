@@ -11,7 +11,7 @@ import socket
 
 UPDATE_FREQ = 1.0/10 # 10Hz
 #RASP_ADDR = "192.168.42.42"
-RASP_ADDR = "192.168.1.8"
+RASP_ADDR = "127.0.0.1"
 RASP_PORT = 8080
 
 
@@ -21,27 +21,45 @@ class StatusPage(Widget):
     gps_enabled = BooleanProperty(False)
     gps_data = "N/A"
     rasp_conn = None
+    rasp_conn_retry = 0
 
     def send_data(self, data):
         self.rasp_conn.send(data)
 
-    def connect(self, do_connect):
-        if do_connect:
-            msg = "Connecting to %s:%d" % (str(RASP_ADDR), RASP_PORT)
-            self.ids.connection_status.text = msg
-            print(msg)
+    def try_connect(self, dt=None):
+        msg = "Connecting to %s:%d" % (str(RASP_ADDR), RASP_PORT)
+        self.ids.connection_status.text = msg
+        print(msg)
+        self.rasp_conn_retry += 1
 
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
             s.connect((RASP_ADDR, RASP_PORT))
             s.send("Hello World")
-            self.ids.connection_status.text = "Established"
-            #data = s.recv(BUFFER_SIZE)
-            self.rasp_conn = s
+        except:
+            self.ids.connection_status.text = "Failed (%d attempts)" % self.rasp_conn_retry
+            if self.rasp_conn_retry < 10:
+                # Retry in a bit
+                Clock.schedule_once(self.try_connect, self.rasp_conn_retry)
+            else:
+                # Giving up
+                self.ids.connect_btn.state = 'normal'
+            return
+
+        self.ids.connection_status.text = "Established"
+        #data = s.recv(BUFFER_SIZE)
+        self.rasp_conn = s
+
+
+    def connect(self, do_connect):
+        if do_connect:
+            self.try_connect()
         else:
             msg = "Disconnecting from %s:%d" % (str(RASP_ADDR), RASP_PORT)
             self.ids.connection_status.text = msg
             print(msg)
-            self.rasp_conn.close()
+            if self.rasp_conn is not None:
+                self.rasp_conn.close()
             self.ids.connection_status.text = "Disconnected"
 
     def update_accelerometer(self):
