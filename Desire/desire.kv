@@ -1,0 +1,51 @@
+<StatusPage>:
+    GridLayout:
+        rows: 5
+        size: root.size
+
+        GridLayout:
+            cols: 3
+
+            Label:
+                text: 'Accelerometer'
+            Switch:
+                value: root.accelerometer_enabled
+                on_active: root.accelerometer_enabled = args[1]
+            Label:
+                id: accelerometer_value
+                text: "N/A"
+
+        GridLayout:
+            cols: 3
+            Label:
+                text: 'Compass'
+            Switch:
+                value: root.compass_enabled
+                on_active: root.compass_enabled = args[1]
+            Label:
+                id: compass_value
+
+        GridLayout:
+            cols: 3
+
+            Label:
+                text: 'GPS'
+            Switch:
+                value: root.gps_enabled
+                on_active: root.change_gps_status(args)
+
+            Label:
+                id: gps_value
+
+        GridLayout:
+            cols: 2
+
+            ToggleButton:
+                text: "Connect"
+                on_state: root.connect(args)
+
+            Label:
+                id: connection_status
+
+        Label:
+            id: battery_status
