@@ -1,0 +1,20 @@
+from kivy.app import App
+from kivy.uix.widget import Widget
+from plyer import vibrator
+from kivy.clock import Clock
+
+class StatusPage(Widget):
+    def update(self, dt):
+        print("Desire: %f" % dt)
+
+
+class SensorsApp(App):
+    def build(self):
+        status_page = StatusPage()
+        vibrator.vibrate(1)  # vibrate for 10 seconds
+        print("Hello World")
+        Clock.schedule_interval(status_page.update, 1.0 / 10.0) # 10Hz
+        return status_page
+
+if __name__ == '__main__':
+    SensorsApp().run()
