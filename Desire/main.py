@@ -2,14 +2,15 @@ from kivy.app import App
 from kivy.uix.widget import Widget
 from kivy.clock import Clock, mainthread
 from kivy.utils import platform
+from kivy.uix.button import Button
+from kivy.uix.switch import Switch
+from kivy.uix.camera import Camera
 
 from plyer import vibrator, tts, notification
 from plyer import accelerometer, battery, compass, gps
-from kivy.uix.camera import Camera
 
 
 class StatusPage(Widget):
-    camera = None
     gps_data = None
 
     def update(self, dt):
@@ -22,17 +23,15 @@ class StatusPage(Widget):
         print("Desire Compass: %s" % str(compass_value))
         print("Desire GPS: %s -- %s" % (str(self.gps_data['location']),
                                         str(self.gps_data['status'])))
-        print("Desire Camera: %s" % str(self.camera.texture))
 
 
 class SensorsApp(App):
     service = None
     gps = None
     gps_data = {'location':None, 'status':None}
-    camera = None
 
     def build(self):
-        if False and platform ==  "android":
+        if platform ==  "android":
             from android import AndroidService
             service = AndroidService('desire sensors service', 'running')
             service.start('service started')
@@ -53,11 +52,26 @@ class SensorsApp(App):
 
 #        Clock.schedule_interval(status_page.update, 1.0 / 10.0) # 10H
         Clock.schedule_interval(status_page.update, 1.0) # 1Hz
-        self.camera = Camera(play=True)
-        status_page.add_widget(self.camera)
-        status_page.camera = self.camera
 
+
+        button=Button(text='Service',size_hint=(0.12,0.12))
+        button.bind(on_press=self.callback)
+        status_page.add_widget(button)
+
+        switch = Switch()
+        switch.bind(active=self.callback)
+        status_page.add_widget(switch)
         return status_page
+
+    def on_stop(self):
+        if self.service is not None:
+            print("Stopping Desire Service")
+            self.service.stop()
+
+    def callback(self, instance, value):
+        print('the switch', instance, 'is', value)
+
+
 
     @mainthread
     def on_gps_location(self, **kwargs):
