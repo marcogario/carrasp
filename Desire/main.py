@@ -130,8 +130,15 @@ class StatusPage(Widget):
             self.update_compass()
         if self.gps_enabled:
             self.update_gps()
+        self.update_camera()
         self.update_battery()
         return
+
+    def update_camera(self):
+        pass
+
+    def camera_complete(self, filename):
+        self.send_data(filename) # FIXME: Send the data
 
     def change_gps_status(self, args):
         _, is_active = args
