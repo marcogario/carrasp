@@ -73,6 +73,10 @@ class LauncherController(object):
             self.dev.detach_kernel_driver(0)
 
         self.dev.set_configuration()
+        self.step = 0.2
+        self.position = None
+        self.max_position = 21
+        self.reset_pos()
 
     def up(self):
         self.dev.ctrl_transfer(0x21,0x09,0,0,[0x02,0x02,0x00,0x00,0x00,0x00,0x00,0x00])
@@ -94,29 +98,64 @@ class LauncherController(object):
 
     def step_up(self):
         self.up()
-        time.sleep(0.05)
+        time.sleep(self.step)
         self.stop()
 
     def step_down(self):
         self.down()
-        time.sleep(0.05)
+        time.sleep(self.step)
         self.stop()
 
     def step_left(self):
         self.left()
-        time.sleep(0.05)
+        time.sleep(self.step)
         self.stop()
 
     def step_right(self):
         self.right()
-        time.sleep(0.05)
+        time.sleep(self.step)
         self.stop()
+
+    def reset_pos(self, target=11):
+        print("Initializing...")
+        self.down()
+        time.sleep(2)
+        self.stop()
+        self.step_up()
+        
+        self.right()
+        time.sleep(6)
+        self.stop()
+        self.position = 0
+        print("Going to middle")
+        self.goto(target)
+
+    def goto(self, target):
+        if target < 0 :
+            target = 0
+        elif target > self.max_position:
+            target = self.max_position
+            
+        if self.position < target:
+            while self.position != target:
+                self.step_left()
+                time.sleep(0.5)
+                self.position += 1
+        else:
+            while self.position != target:
+                self.step_right()
+                time.sleep(0.5)
+                self.position -= 1
 
 if __name__ == "__main__":
     print("Demoing Launcher")
     lc = LauncherController()
-    for f in [lc.step_up, lc.step_down, lc.step_left, lc.step_right]:
-        for i in xrange(10):
-            f()
-            time.sleep(0.5)
-    lc.fire()
+
+    time.sleep(1)
+    lc.goto(0)
+    time.sleep(1)
+    lc.goto(11)
+    time.sleep(1)
+    lc.goto(21)
+    time.sleep(1)    
+    lc.reset_pos()
