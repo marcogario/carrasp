@@ -12,15 +12,19 @@ class Launcher(object):
         self.launcher = None
 
     def setup(self, cmd_q):
-        self.launcher = LauncherMock()
+        try:
+            self.launcher = LauncherController()
+        except:
+            self.launcher = LauncherMock()
         self.cmd_q = cmd_q
 
     def control_loop(self):
         print("Teledoc: Launcher control_loop has started")
+        self.launcher.reset_pos()
         while not self.ns.do_quit:
             try:
                 cmd = self.cmd_q.get(block=True,
-                                                 timeout=0.5)
+                                     timeout=0.5)
                 # Process command
                 self.update_with_command(cmd)
             except Queue.Empty:
@@ -74,9 +78,8 @@ class LauncherController(object):
 
         self.dev.set_configuration()
         self.step = 0.2
-        self.position = None
+        self.position = 0
         self.max_position = 21
-        self.reset_pos()
 
     def up(self):
         self.dev.ctrl_transfer(0x21,0x09,0,0,[0x02,0x02,0x00,0x00,0x00,0x00,0x00,0x00])
@@ -117,7 +120,7 @@ class LauncherController(object):
         self.stop()
 
     def reset_pos(self, target=11):
-        print("Initializing...")
+        print("Launcher: Initializing...")
         self.down()
         time.sleep(2)
         self.stop()
@@ -127,7 +130,7 @@ class LauncherController(object):
         time.sleep(6)
         self.stop()
         self.position = 0
-        print("Going to middle")
+        print("Launcher: Going to middle")
         self.goto(target)
 
     def goto(self, target):
@@ -151,6 +154,7 @@ if __name__ == "__main__":
     print("Demoing Launcher")
     lc = LauncherController()
 
+    lc.reset_pos()
     time.sleep(1)
     lc.goto(0)
     time.sleep(1)

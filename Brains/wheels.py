@@ -1,3 +1,5 @@
+import time
+
 try:
     import RPi.GPIO as GPIO
     rpi = True
@@ -69,13 +71,52 @@ class PiWheels(object):
         self.throttle_control = GPIO.PWM(ThrottleControlPin, 1000)
         self.throttle_control.start(0)
 
-    def control_loop(self):
+    def control_loop(self, health_check=True):
         print("Wheels: control_loop has started")
+        if health_check:
+            print("Start Health-Check")
+            self.health_check()
+            print("Completed")
         while not self.ns.do_quit:
             self.update_steering(self.ns.target_steering)
             self.update_throttle(self.ns.target_throttle)
         self.shutdown()
         print("Wheels: control_loop has stopped")
+
+
+    def health_check(self):
+        print("Steering Right")
+        self.update_steering(SteeringDirection.RIGHT)
+        time.sleep(2)
+
+        print("Steering Left")
+        self.update_steering(SteeringDirection.LEFT)
+        time.sleep(2)
+
+        print("Steering None")
+        self.update_steering(SteeringDirection.NONE)
+        time.sleep(2)
+
+        print("Throttle +50%")
+        self.update_throttle(50)
+        time.sleep(1)
+
+        print("Throttle +100%")
+        self.update_throttle(100)
+        time.sleep(1)
+
+        print("Throttle 0%")
+        self.update_throttle(0)
+        time.sleep(1)
+
+        print("Throttle -50%")
+        self.update_throttle(-50)
+        time.sleep(1)
+
+        print("Throttle -10%")
+        self.update_throttle(-100)
+        time.sleep(1)
+
 
     def shutdown(self):
         # Set enabled to False
@@ -160,7 +201,6 @@ else:
 # Simple demo to test that the hardware is working correctly
 #
 if __name__ == "__main__":
-    import time
     class MockNamespace(object):
         target_steering = SteeringDirection.NONE
         target_throttle = 0
