@@ -1,0 +1,6 @@
+Brains
+======
+
+Launches all other processes and coordinates them.
+
+``` $ python run.py ```
