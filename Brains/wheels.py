@@ -1,9 +1,15 @@
-import RPi.GPIO as GPIO
+try:
+    import RPi.GPIO as GPIO
+    rpi = True
+except:
+    print("Cannot import GPIO")
+    rpi = False
 
 ThrottleControlPin = 2; # TODO: SET
 ThrottleDirectionPin  = 3; # TODO: SET
 SteeringEnablePin  = 5; # TODO: SET
 SteeringDirectionPin = 4; # TODO: SET
+
 
 
 class SteeringDirection(object):
@@ -26,8 +32,7 @@ class PiPin(object):
         gpio_value = GPIO.HIGH if value else GPIO.LOW
         GPIO.output(self.pin_id, gpio_value)
 
-
-class Wheels(object):
+class PiWheels(object):
     """Uses the following namespace variables:
 
        - target_steering
@@ -64,9 +69,9 @@ class Wheels(object):
 
     def control_loop(self):
         print("Wheels: control_loop has started")
-        while self.ns.do_quit is False:
-            self.update_steering(self.target_steering)
-            self.update_throttle(self.target_throttle)
+        while not self.ns.do_quit:
+            self.update_steering(self.ns.target_steering)
+            self.update_throttle(self.ns.target_throttle)
         self.shutdown()
         print("Wheels: control_loop has stopped")
 
@@ -122,6 +127,31 @@ class Wheels(object):
         self.steering_direction(False)
         self.current_steering = SteeringDirection.NONE
 
+
+class WheelsMock(PiWheels):
+    def __init__(self, namespace):
+        PiWheels.__init__(self, namespace)
+
+    def setup(self):
+        pass
+
+    def shutdown(self):
+        pass
+
+    def update_throttle(self, target_throttle):
+        if target_throttle != self.current_throttle:
+            print("Wheels: Updating throttle to: %d" % target_throttle)
+            self.current_throttle = target_throttle
+
+    def update_steering(self, target_steering):
+        if target_steering != self.current_steering:
+            print("Wheels: Updating steering to: %d" % target_steering)
+            self.current_steering = target_steering
+
+if not rpi:
+    Wheels = WheelsMock
+else:
+    Wheels = PiWheels
 
 #
 # Simple demo to test that the hardware is working correctly
