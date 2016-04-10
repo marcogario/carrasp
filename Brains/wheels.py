@@ -36,16 +36,15 @@ class Wheels(object):
     """
 
     def __init__(self, namespace):
-        self.namespace = namespace
+        self.ns = namespace
         self.current_steering = SteeringDirection.NONE
         self.current_throttle = 0
-        self.target_steering = namespace.target_steering
-        self.target_throttle = namespace.target_throttle
 
         self.throttle_direction = None
         self.throttle_control = None
         self.steering_enable = None
         self.steering_direction = None
+
 
     def setup(self):
         GPIO.setmode(GPIO.BOARD)       # Numbers GPIOs by physical location
@@ -65,9 +64,9 @@ class Wheels(object):
 
     def control_loop(self):
         print("Wheels: control_loop has started")
-        while self.namespace.do_quit is False:
-            self.update_steering()
-            self.update_throttle()
+        while self.ns.do_quit is False:
+            self.update_steering(self.target_steering)
+            self.update_throttle(self.target_throttle)
         self.shutdown()
         print("Wheels: control_loop has stopped")
 
@@ -84,28 +83,28 @@ class Wheels(object):
         except Exception as ex:
             print(ex)
 
-    def update_throttle(self):
+    def update_throttle(self, target_throttle):
         # TODO: This can be made more sophisticated by using rules for
         # defining the acceleration curve
-        if self.target_throttle != self.current_throttle:
-            print("Wheels: Updating throttle to: %d" % self.target_throttle)
-            if self.target_throttle >= 0:
+        if target_throttle != self.current_throttle:
+            print("Wheels: Updating throttle to: %d" % target_throttle)
+            if target_throttle >= 0:
                 self.throttle_direction(True)
             else:
                 self.throttle_direction(False)
-            self.throttle_control.ChangeDutyCycle(self.target_throttle)
-            self.current_throttle = self.target_throttle
+            self.throttle_control.ChangeDutyCycle(target_throttle)
+            self.current_throttle = target_throttle
 
-    def update_steering(self):
-        if self.current_steering != self.target_steering:
-            print("Wheels: Updating steering to: %d" % self.target_steering)
+    def update_steering(self, target_steering):
+        if target_steering != self.current_steering:
+            print("Wheels: Updating steering to: %d" % target_steering)
             if self.current_steering == SteeringDirection.LEFT:
                 self.do_steer_left()
             elif self.current_steering == SteeringDirection.RIGHT:
                 self.do_steer_right()
             else:
-                assert self.target_steering == SteeringDirection.NONE, \
-                "Unknown value %s for steering" % str(self.target_steering)
+                assert target_steering == SteeringDirection.NONE, \
+                "Unknown value %s for steering" % str(target_steering)
                 self.do_steer_none()
 
     def do_steer_left(self):

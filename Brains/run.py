@@ -1,7 +1,7 @@
 import multiprocessing
 import time
 
-#from wheels import SteeringDirection, Wheels
+from wheels import SteeringDirection, Wheels
 
 
 class Brains(object):
@@ -22,8 +22,8 @@ class Brains(object):
     def start_processes(self):
         # Kill switch for processes
         self.ns.do_quit = False
-        self.start_demo()
-        #self.start_wheels()
+        #self.start_demo()
+        self.start_wheels()
         self.start_senses()
         self.start_teledoc()
 
