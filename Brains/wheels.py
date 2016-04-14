@@ -5,10 +5,11 @@ except:
     print("Cannot import GPIO")
     rpi = False
 
-ThrottleControlPin = 2; # TODO: SET
-ThrottleDirectionPin  = 3; # TODO: SET
-SteeringEnablePin  = 5; # TODO: SET
-SteeringDirectionPin = 4; # TODO: SET
+SteeringEnablePin  = 16;
+ThrottleControlPin = 12;
+
+ThrottleDirectionPin  = 8;
+SteeringDirectionPin = 10;
 
 
 
@@ -64,6 +65,7 @@ class PiWheels(object):
         self.steering_enable(False)
 
         # PWM controller with Frequece to 1KHz
+        GPIO.setup(ThrottleControlPin, GPIO.OUT)
         self.throttle_control = GPIO.PWM(ThrottleControlPin, 1000)
         self.throttle_control.start(0)
 
@@ -94,18 +96,19 @@ class PiWheels(object):
         if target_throttle != self.current_throttle:
             print("Wheels: Updating throttle to: %d" % target_throttle)
             if target_throttle >= 0:
-                self.throttle_direction(True)
-            else:
                 self.throttle_direction(False)
-            self.throttle_control.ChangeDutyCycle(target_throttle)
+                self.throttle_control.ChangeDutyCycle(target_throttle)
+            else:
+                self.throttle_direction(True)
+                self.throttle_control.ChangeDutyCycle(-target_throttle)
             self.current_throttle = target_throttle
 
     def update_steering(self, target_steering):
         if target_steering != self.current_steering:
             print("Wheels: Updating steering to: %d" % target_steering)
-            if self.current_steering == SteeringDirection.LEFT:
+            if target_steering == SteeringDirection.LEFT:
                 self.do_steer_left()
-            elif self.current_steering == SteeringDirection.RIGHT:
+            elif target_steering == SteeringDirection.RIGHT:
                 self.do_steer_right()
             else:
                 assert target_steering == SteeringDirection.NONE, \
@@ -114,12 +117,12 @@ class PiWheels(object):
 
     def do_steer_left(self):
         self.steering_enable(True)
-        self.steering_direction(True)
+        self.steering_direction(False)
         self.current_steering = SteeringDirection.LEFT
 
     def do_steer_right(self):
         self.steering_enable(True)
-        self.steering_direction(False)
+        self.steering_direction(True)
         self.current_steering = SteeringDirection.RIGHT
 
     def do_steer_none(self):
@@ -166,38 +169,46 @@ if __name__ == "__main__":
     w = Wheels(ns)
     print("Setup")
     w.setup()
+    time.sleep(1)
 
     print("Steering Right")
     ns.target_steering = SteeringDirection.RIGHT
-    w.update_steering()
-    time.sleep(1)
+    w.update_steering(ns.target_steering)
+    time.sleep(2)
+
     print("Steering Left")
-    ns.target_steering = SteeringDirection.RIGHT
-    w.update_steering()
-    time.sleep(1)
+    ns.target_steering = SteeringDirection.LEFT
+    w.update_steering(ns.target_steering)
+    time.sleep(2)
+
     print("Steering None")
-    ns.target_steering = SteeringDirection.RIGHT
-    w.update_steering()
-    time.sleep(1)
+    ns.target_steering = SteeringDirection.NONE
+    w.update_steering(ns.target_steering)
+    time.sleep(2)
 
     print("Throttle +50%")
     ns.target_throttle = 50
+    w.update_throttle(ns.target_throttle)
     time.sleep(1)
 
     print("Throttle +100%")
     ns.target_throttle = 100
+    w.update_throttle(ns.target_throttle)
     time.sleep(1)
 
     print("Throttle 0%")
     ns.target_throttle = 0
+    w.update_throttle(ns.target_throttle)
     time.sleep(1)
 
     print("Throttle -50%")
     ns.target_throttle = -50
+    w.update_throttle(ns.target_throttle)
     time.sleep(1)
 
     print("Throttle -10%")
     ns.target_throttle = -100
+    w.update_throttle(ns.target_throttle)
     time.sleep(1)
 
     print("Exiting")
