@@ -2,19 +2,29 @@
     var FPS_WEIGHT = 0.1;
     socket = io.connect();
 
-    var canvas = $("#camera_canvas")[0];
+    var front_canvas = $("#camera_canvas")[0];
+    var back_canvas = $("#back_camera_canvas")[0];
 
-    stream = {
+    front_stream = {
         startTime: new Date().getTime(),
         frameCt: 0,
         fps: $("#fps_counter")[0],
-        context: canvas.getContext('2d'),
-        canvas: canvas,
+        context: front_canvas.getContext('2d'),
+        canvas: front_canvas,
     };
 
-    socket.on('frame', function ( data ) {
+    back_stream = {
+        startTime: new Date().getTime(),
+        frameCt: 0,
+        fps: $("#fps_counter")[0],
+        context: back_canvas.getContext('2d'),
+        canvas: back_canvas,
+    };
+
+
+    function draw_on_canvas(stream, data, emit_key) {
         // Each time we receive an image, request a new one
-        socket.emit( 'stream', data.id );
+        socket.emit(emit_key, data.id );
 
         img = new Image();
         img.src = data.raw;
@@ -46,10 +56,18 @@
         ctx.stroke();
 
         stream.frameCt++;
+    };
+
+    socket.on('front_frame', function ( data ) {
+        draw_on_canvas(front_stream, data, "front_camera");
     });
 
+    socket.on('back_frame', function ( data ) {
+        draw_on_canvas(back_stream, data, "back_camera");
+    });
 
-    socket.emit('stream', 0);
+    socket.emit('front_camera', 0);
+    socket.emit('back_camera', 0);
 
     // Update fps (loop)
     setInterval( function () {
@@ -64,5 +82,14 @@
 
         stream.fps.innerText = result;
     }, 100 );
+
+    // Wheels
+    socket.on('wheels_data', function ( data ) {
+        socket.emit('wheels', 0);
+        $("#target_throttle")[0].innerText = data.target_throttle;
+        $("#target_steering")[0].innerText = data.target_steering;
+    });
+
+    socket.emit('wheels', 0);
 
 })( io );

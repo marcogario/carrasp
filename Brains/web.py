@@ -8,7 +8,7 @@ from flask import Flask, render_template, request, Response
 from flask.ext.socketio import SocketIO, emit
 
 from launcher import LauncherCmd
-
+from wheels import SteeringDirection
 
 
 class WebInterface(object):
@@ -32,8 +32,8 @@ class WebInterface(object):
         self.app.add_url_rule("/debug/wheels", "wheels", self.wheels)
 
         # Note: This is nested within __init__ on purpose
-        @self.socketio.on('stream')
-        def stream(sid):
+        @self.socketio.on('front_camera')
+        def front_camera(sid):
             frame = self.ns.front_camera_frame
             frame64 = base64.b64encode(frame)
             data = {
@@ -41,24 +41,63 @@ class WebInterface(object):
                 'raw': 'data:image/jpeg;base64,' + frame64,
                 'timestamp': time.time()
             }
-            emit('frame', data)
+            emit('front_frame', data)
+
+        @self.socketio.on('back_camera')
+        def back_camera(sid):
+            frame = self.ns.back_camera_frame
+            frame64 = base64.b64encode(frame)
+            data = {
+                'id': 0,
+                'raw': 'data:image/jpeg;base64,' + frame64,
+                'timestamp': time.time()
+            }
+            emit('back_frame', data)
+
+        @self.socketio.on('wheels')
+        def wheels(sid):
+            data = {
+                'target_steering': self.ns.target_steering,
+                'target_throttle': self.ns.target_throttle,
+            }
+            emit('wheels_data', data)
+
 
     def command(self):
         """command route."""
         command_id = request.form["command_id"]
-        if command_id == "up":
-            cmd = LauncherCmd.Up
-        elif command_id == "down":
-            cmd = LauncherCmd.Down
-        elif command_id == "left":
-            cmd = LauncherCmd.Left
-        elif command_id == "right":
-            cmd = LauncherCmd.Right
-        elif command_id == "fire":
-            cmd = LauncherCmd.Fire
-        else:
-            raise KeyError("Unknown command provided")
-        self.launcher_cmd_q.put(cmd)
+        target = request.form["target"]
+        if target == "launcher":
+            if command_id == "up":
+                cmd = LauncherCmd.Up
+            elif command_id == "down":
+                cmd = LauncherCmd.Down
+            elif command_id == "left":
+                cmd = LauncherCmd.Left
+            elif command_id == "right":
+                cmd = LauncherCmd.Right
+            elif command_id == "fire":
+                cmd = LauncherCmd.Fire
+            else:
+                raise KeyError("Unknown command provided")
+            self.launcher_cmd_q.put(cmd)
+        elif target == "wheels":
+            if command_id == "+":
+                self.ns.target_throttle = (self.ns.target_throttle + 10) % 100
+            elif command_id == "-":
+                self.ns.target_throttle = (self.ns.target_throttle - 10) % 100
+            elif command_id == "left":
+                if self.ns.target_steering == SteeringDirection.RIGHT:
+                    self.ns.target_steering = SteeringDirection.NONE
+                else:
+                    self.ns.target_steering = SteeringDirection.LEFT
+            elif command_id == "right":
+                if self.ns.target_steering == SteeringDirection.LEFT:
+                    self.ns.target_steering = SteeringDirection.NONE
+                else:
+                    self.ns.target_steering = SteeringDirection.RIGHT
+
+
         return "done"
 
     def control_loop(self):
