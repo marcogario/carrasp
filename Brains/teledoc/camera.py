@@ -31,7 +31,7 @@ class Camera(object):
                 ret, jpeg = cv2.imencode('.jpg', small)
                 if ret:
                     self.ns.frame = jpeg.tostring()
-                    print("Teledoc Camera: Updated Frame")
+                    #print("Teledoc Camera: Updated Frame")
 
     def get_frame_base64(self):
         f = self.ns.frame

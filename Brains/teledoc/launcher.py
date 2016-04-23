@@ -10,6 +10,7 @@ class Launcher(object):
     def __init__(self, namespace):
         self.ns = namespace
         self.launcher = None
+        self.cmd_q = None
 
     def setup(self, cmd_q):
         try:
@@ -47,6 +48,9 @@ class Launcher(object):
 
 
 class LauncherMock(object):
+
+    def reset_pos(self, target=0):
+        print("Resetting...")
 
     def fire(self):
         print("Pew! Pew!")
@@ -125,7 +129,7 @@ class LauncherController(object):
         time.sleep(2)
         self.stop()
         self.step_up()
-        
+
         self.right()
         time.sleep(6)
         self.stop()
@@ -138,7 +142,7 @@ class LauncherController(object):
             target = 0
         elif target > self.max_position:
             target = self.max_position
-            
+
         if self.position < target:
             while self.position != target:
                 self.step_left()
@@ -161,5 +165,5 @@ if __name__ == "__main__":
     lc.goto(11)
     time.sleep(1)
     lc.goto(21)
-    time.sleep(1)    
+    time.sleep(1)
     lc.reset_pos()

@@ -4,7 +4,7 @@ from multiprocessing import Queue, Manager, Process
 from wheels import SteeringDirection, Wheels
 from teledoc.camera import Camera
 from teledoc.launcher import Launcher, LauncherCmd
-
+from web.app import WebInterface
 
 class Brains(object):
     """Coordinate all running processes."""
@@ -29,13 +29,13 @@ class Brains(object):
         self.start_senses()
         self.start_teledoc_launcher()
         self.start_teledoc_camera()
-        #self.start_demo()
+        self.start_web()
 
     def _start_process(self, name, instance):
         p = Process(target=instance.control_loop)
         p.start()
         self.pdict[name] = p
-            
+
     def start_demo(self):
         self.ns.msg = "0"
         from demo import Demo
@@ -48,10 +48,15 @@ class Brains(object):
             time.sleep(1)
             self.ns.msg = str(i)
             print("Updating msg to %d" %i)
-            
+
     def start_senses(self):
         """Start Senses Process"""
         pass
+
+    def start_web(self):
+        web_ui = WebInterface(self.ns)
+        web_ui.setup(self.teledoc_launcher.cmd_q)
+        self._start_process("web-ui", web_ui)
 
     def start_wheels(self):
         """Start the Wheels Process"""
