@@ -7,17 +7,14 @@ class LauncherCmd(object):
 
 
 class Launcher(object):
-    def __init__(self, namespace):
+    def __init__(self, namespace, cmd_q):
         self.ns = namespace
         self.launcher = None
-        self.cmd_q = None
-
-    def setup(self, cmd_q):
+        self.cmd_q = cmd_q
         try:
             self.launcher = LauncherController()
         except:
             self.launcher = LauncherMock()
-        self.cmd_q = cmd_q
 
     def control_loop(self):
         print("Teledoc: Launcher control_loop has started")

@@ -2,9 +2,10 @@ import time
 from multiprocessing import Queue, Manager, Process
 
 from wheels import SteeringDirection, Wheels
-from teledoc.camera import Camera
-from teledoc.launcher import Launcher, LauncherCmd
-from web.app import WebInterface
+from camera import Camera
+from launcher import Launcher, LauncherCmd
+from web import WebInterface
+
 
 class Brains(object):
     """Coordinate all running processes."""
@@ -18,25 +19,30 @@ class Brains(object):
 
         self.wheels = None
         self.senses = None
-        self.teledoc_camera = None
-        self.teledoc_launcher = None
+        self.front_camera = None
+        self.back_camera = None
+        self.launcher = None
+        self.web_ui = None
         self.pdict = {}
 
     def start_processes(self):
-        # Kill switch for processes
+        # Kill-switch for processes
         self.ns.do_quit = False
         self.start_wheels()
         self.start_senses()
-        self.start_teledoc_launcher()
-        self.start_teledoc_camera()
+        self.start_launcher()
+        self.start_cameras()
         self.start_web()
 
-    def _start_process(self, name, instance):
+    def _start_process(self, instance_name):
+        instance = getattr(self, instance_name)
         p = Process(target=instance.control_loop)
         p.start()
-        self.pdict[name] = p
+        self.pdict[instance_name] = p
+        print("'%s' started." % instance_name)
 
     def start_demo(self):
+        """Shows how to use the namespace to share data among processes."""
         self.ns.msg = "0"
         from demo import Demo
         d = Demo(self.ns)
@@ -54,9 +60,10 @@ class Brains(object):
         pass
 
     def start_web(self):
-        web_ui = WebInterface(self.ns)
-        web_ui.setup(self.teledoc_launcher.cmd_q)
-        self._start_process("web-ui", web_ui)
+        """Starts the Web-Interface"""
+        self.web_ui = WebInterface(self.ns,
+                                   self.launcher.cmd_q)
+        self._start_process("web_ui")
 
     def start_wheels(self):
         """Start the Wheels Process"""
@@ -64,27 +71,24 @@ class Brains(object):
         self.ns.target_throttle = 0
         # Create class and process
         self.wheels = Wheels(self.ns)
-        self.wheels.setup()
-        self._start_process("wheels", self.wheels)
-        print("Wheels started.")
+        self._start_process("wheels")
 
-    def start_teledoc_camera(self):
-        """Start Teledoc Camera Process"""
-        self.ns.frame = None
+    def start_cameras(self):
+        """Start Cameras Processes"""
         self.ns.camera_freq = (1.0 / 3.0)
+        self.ns.front_camera_frame = None
+        self.ns.back_camera_frame = None
         # Create class and process
-        self.teledoc_camera = Camera(self.ns)
-        self.teledoc_camera.setup()
-        self._start_process("teledoc-camera", self.teledoc_camera)
-        print("Senses started.")
+        self.front_camera = Camera(self.ns, is_front=True)
+        self._start_process("front_camera")
+        self.back_camera = Camera(self.ns, is_front=False)
+        self._start_process("back_camera")
 
-    def start_teledoc_launcher(self):
+    def start_launcher(self):
         """Start the Teledoc Launcher Process"""
         cmd_q = Queue()
-        self.teledoc_launcher = Launcher(self.ns)
-        self.teledoc_launcher.setup(cmd_q)
-        self._start_process("teledoc-launcher", self.teledoc_launcher)
-        print("Teledoc started.")
+        self.launcher = Launcher(self.ns, cmd_q=cmd_q)
+        self._start_process("launcher")
 
     def shutdown(self):
         print("Exiting...")

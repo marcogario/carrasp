@@ -5,15 +5,18 @@ import cv2
 
 
 class Camera(object):
-    def __init__(self, namespace):
+    def __init__(self, namespace, is_front):
         self.ns = namespace
         self.cam = None
-
-    def setup(self):
-        self.cam = cv2.VideoCapture(0)
+        if is_front:
+            self.camera_id = 0
+        else:
+            self.camera_id = 1
+        self.is_front = is_front
+        self.cam = cv2.VideoCapture(self.camera_id)
 
     def control_loop(self):
-        print("Teledoc: Camera control_loop has started")
+        print("Camera %d control_loop has started" % self.camera_id)
         while not self.ns.do_quit:
             self.update_frame()
             time.sleep(self.ns.camera_freq) # 1.0 / 30.0
@@ -30,12 +33,19 @@ class Camera(object):
                 small = cv2.resize(image, (0,0), fx=0.5, fy=0.5)
                 ret, jpeg = cv2.imencode('.jpg', small)
                 if ret:
-                    self.ns.frame = jpeg.tostring()
-                    #print("Teledoc Camera: Updated Frame")
+                    frame = jpeg.tostring()
+        else:
+            frame = open("static/nosignal.jpg").read()
+
+        if self.is_front:
+            self.ns.front_camera_frame = frame
+        else:
+            self.ns.back_camera_frame = frame
 
     def get_frame_base64(self):
         f = self.ns.frame
         return base64.b64encode(f)
+
 
 if __name__ == "__main__":
     class MockNamespace(object):
@@ -45,7 +55,6 @@ if __name__ == "__main__":
     ns = MockNamespace()
     print("Testing Camera connection...")
     c = Camera(ns)
-    c.cam = cv2.VideoCapture(0)
     time.sleep(1)
     c.update_frame()
     print(c.get_frame_base64())

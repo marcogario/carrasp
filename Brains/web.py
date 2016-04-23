@@ -4,24 +4,21 @@ import time
 import logging
 import base64
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, Response
 from flask.ext.socketio import SocketIO, emit
 
-# TODO: Move things around so that this cna be imported
-class LauncherCmd(object):
-    Up, Down, Left, Right, Fire = range(5)
+from launcher import LauncherCmd
+
 
 
 class WebInterface(object):
 
-    def __init__(self, ns):
+    def __init__(self, ns,
+                 launcher_cmd_q=None):
         self.ns = ns
-
-
-    def setup(self, launcher_cmd_q):
-        self.app = Flask(__name__)
-        self.socketio = SocketIO(self.app)
         self.launcher_cmd_q = launcher_cmd_q
+        self.app = Flask(__name__)
+        self.socketio = SocketIO(self.app, logger=True)
 
         # Logging info
         stream_handler = logging.StreamHandler()
@@ -29,16 +26,19 @@ class WebInterface(object):
         self.app.logger.addHandler(stream_handler)
 
         self.app.add_url_rule("/", "index", self.index)
-        self.app.add_url_rule('/command', "command", self.command, methods=["POST"])
+        self.app.add_url_rule("/command", "command", self.command, methods=["POST"])
+        # Debugging screen
+        self.app.add_url_rule("/debug/camera", "camera", self.camera)
+        self.app.add_url_rule("/debug/wheels", "wheels", self.wheels)
 
+        # Note: This is nested within __init__ on purpose
         @self.socketio.on('stream')
-        def stream(foo):
-            print("Stream")
-            ns = self._brains_namespace
-            frame = base64.b64encode(ns.frame())
+        def stream(sid):
+            frame = self.ns.front_camera_frame
+            frame64 = base64.b64encode(frame)
             data = {
                 'id': 0,
-                'raw': 'data:image/jpeg;base64,' + frame,
+                'raw': 'data:image/jpeg;base64,' + frame64,
                 'timestamp': time.time()
             }
             emit('frame', data)
@@ -68,17 +68,33 @@ class WebInterface(object):
         """Video streaming home page."""
         return render_template('index.html')
 
+    def camera(self):
+        if request.args.get("id") == "0":
+            is_front = True
+        else:
+            is_front = False
 
+        if is_front:
+            frame = self.ns.front_camera_frame
+        else:
+            frame = self.ns.back_camera_frame
+        return Response(frame, mimetype="image/jpeg")
 
+    def wheels(self):
+        target_steering = self.ns.target_steering
+        target_throttle = self.ns.target_throttle
+        data = (target_steering, target_throttle)
+        return Response("<html><h2>Target Steering: %d</h2>" \
+                        "<h2>Target Throttle: %d</h2>"\
+                        "</html>" % data)
 
 
 
 if __name__ == '__main__':
     class MockNamespace(object):
-        frame = None
+        front_camera_frame = open("static/nosignal.jpg").read()
     ns = MockNamespace()
     web_ui = WebInterface(ns)
-    web_ui.setup(None)
     web_ui.control_loop()
 
 

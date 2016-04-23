@@ -53,8 +53,6 @@ class PiWheels(object):
         self.steering_enable = None
         self.steering_direction = None
 
-
-    def setup(self):
         GPIO.setmode(GPIO.BOARD)       # Numbers GPIOs by physical location
 
         # Configure GPIO's
@@ -172,9 +170,23 @@ class PiWheels(object):
         self.current_steering = SteeringDirection.NONE
 
 
-class WheelsMock(PiWheels):
+class WheelsMock(object):
+
     def __init__(self, namespace):
-        PiWheels.__init__(self, namespace)
+        self.ns = namespace
+        self.current_steering = SteeringDirection.NONE
+        self.current_throttle = 0
+
+        self.throttle_direction = None
+        self.throttle_control = None
+        self.steering_enable = None
+        self.steering_direction = None
+
+    def control_loop(self, health_check=True):
+        while not self.ns.do_quit:
+            self.update_steering(self.ns.target_steering)
+            self.update_throttle(self.ns.target_throttle)
+        self.shutdown()
 
     def setup(self):
         pass
